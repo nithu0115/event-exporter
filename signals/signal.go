@@ -21,7 +21,7 @@ func SigHandler() <-chan struct{} {
 			syscall.SIGILL,  // illegal instruction
 			syscall.SIGFPE)  // floating point - this is why we can't have nice things
 		sig := <-c
-		log.Warnf("Signal (%v) Detected, Shutting Down", sig)
+		log.Warningf("Signal (%v) Detected, Shutting Down", sig)
 		close(stop)
 	}()
 	return stop

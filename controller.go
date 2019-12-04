@@ -5,6 +5,7 @@ import (
 
 	log "k8s.io/klog"
 
+	"github.com/eventscrapper/sinks"
 	v1 "k8s.io/api/core/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	coreinformers "k8s.io/client-go/informers/core/v1"
@@ -27,7 +28,7 @@ type EventRouter struct {
 	listerSynched cache.InformerSynced
 
 	// event sink
-	//sink sinks.EventSinkInterface
+	sink sink.EventSinkInterface
 
 	// queue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -41,7 +42,7 @@ type EventRouter struct {
 func newEventRouter(kubeClient kubernetes.Interface, eventsInformer coreinformers.EventInformer) *EventRouter {
 	er := &EventRouter{
 		client: kubeClient,
-		//eSink:      sinks.ManufactureSink(),
+		sink:   sink.ManufactureSink(),
 	}
 	// create the workqueue
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
@@ -76,15 +77,15 @@ func (er *EventRouter) Run(stopCh <-chan struct{}) {
 func (er *EventRouter) addEvent(obj interface{}) {
 	event := obj.(*v1.Event)
 	//er.eSink.UpdateEvents(e, nil)
-	log.V(5).Infof("Event Deleted from the system:\n%v", event)
+	log.V(5).Info("Event Deleted from the system:\n%v", event)
 }
 
 // updateEvent is called any time there is an update to an existing event
 func (er *EventRouter) updateEvent(objOld interface{}, objNew interface{}) {
 	oldEvent := objOld.(*v1.Event)
 	newEvent := objNew.(*v1.Event)
-	//er.eSink.UpdateEvents(newEvent, oldEvent)
-	log.V(5).Infof("Event Deleted from the system:\n%v, %v", newEvent, oldEvent)
+	er.sink.UpdateEvents(newEvent, oldEvent)
+	log.V(5).Info("Event Deleted from the system:\n%v, %v", newEvent, oldEvent)
 }
 
 // deleteEvent should only occur when the system garbage collects events via TTL expiration
@@ -94,16 +95,16 @@ func (er *EventRouter) deleteEvent(obj interface{}) {
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
-			log.V(2).Infof("Object is neither event nor tombstone: %+v", obj)
+			log.V(2).Info("Object is neither event nor tombstone: %+v", obj)
 			return
 		}
 		event, ok = tombstone.Obj.(*v1.Event)
 		if !ok {
-			log.V(2).Infof("Tombstone contains object that is not a pod: %+v", obj)
+			log.V(2).Info("Tombstone contains object that is not a pod: %+v", obj)
 			return
 		}
 	}
 	// NOTE: This should *only* happen on TTL expiration there
 	// is no reason to push this to a sink
-	log.V(5).Infof("Event Deleted from the system:\n%v", event)
+	log.V(5).Info("Event Deleted from the system:\n%v", event)
 }

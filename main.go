@@ -19,7 +19,7 @@ var (
 )
 
 func newKubernetesClient(kubeconfigPath, apiServerAddr string) (kubernetes.Interface, error) {
-	config, err := clientcmd.BuildConfigFromFlags(kubeconfigPath, apiServerAddr)
+	config, err := clientcmd.BuildConfigFromFlags(apiServerAddr, kubeconfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +39,7 @@ func main() {
 	client, err := newKubernetesClient(kubeconfigPath, apiServerAddr)
 
 	if err != nil {
-		log.Fatal("Unable to connect to masters: ", err)
-		os.Exit(1)
+		log.Fatal("Failed to initialize Kubernetes client: ", err)
 	}
 
 	sharedInformers := informers.NewSharedInformerFactory(client, 0)

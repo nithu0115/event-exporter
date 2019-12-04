@@ -16,6 +16,7 @@ type EventSinkInterface interface {
 // ManufactureSink will manufacture a sink according to viper configs
 // TODO: Determine if it should return an array of sinks
 func ManufactureSink() (e EventSinkInterface) {
+	viper.SetDefault("sink", "stdoutsink")
 	s := viper.GetString("sink")
 	log.Infof("Sink is [%v]", s)
 	switch s {
@@ -28,7 +29,8 @@ func ManufactureSink() (e EventSinkInterface) {
 		bufferSize := viper.GetInt("sinkBufferSize")
 		overflow := viper.GetBool("sinkDiscardMessages")
 
-		e = NewStdOutSink(overflow, bufferSize)
+		e := NewStdOutSink(overflow, bufferSize)
+		go e.Run(make(chan bool))
 	/*case "s3sink":
 	region := viper.GetString("s3SinkRegion")
 	if region == "" {
@@ -77,7 +79,7 @@ func ManufactureSink() (e EventSinkInterface) {
 	// case "logfile"
 	default:
 		err := errors.New("Invalid Sink Specified")
-		panic(err.Error())
+		log.Fatalf("%v, Sink variable not set, exiting program...", err.Error())
 	}
 	return e
 }

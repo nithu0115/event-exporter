@@ -12,7 +12,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
 )
 
 // EventRouter is responsible for maintaining a stream of kubernetes
@@ -35,7 +34,7 @@ type EventRouter struct {
 	// means we can ensure we only process a fixed amount of resources at a
 	// time, and makes it easy to ensure we are never processing the same item
 	// simultaneously in two different workers.
-	queue workqueue.RateLimitingInterface
+	//queue workqueue.RateLimitingInterface
 }
 
 // NewEventRouter will create a new event router using the input params
@@ -44,9 +43,6 @@ func newEventRouter(kubeClient kubernetes.Interface, eventsInformer coreinformer
 		client: kubeClient,
 		sink:   sinks.ManufactureSink(),
 	}
-	// create the workqueue
-	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
-	er.queue = queue
 
 	eventsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    er.addEvent,
@@ -76,8 +72,8 @@ func (er *EventRouter) Run(stopCh <-chan struct{}) {
 // addEvent is called when an event is created, or during the initial list
 func (er *EventRouter) addEvent(obj interface{}) {
 	event := obj.(*v1.Event)
-	//er.eSink.UpdateEvents(e, nil)
-	log.V(5).Info("Event Deleted from the system:\n%v", event)
+	fmt.Println(event)
+	er.sink.UpdateEvents(event, nil)
 }
 
 // updateEvent is called any time there is an update to an existing event
@@ -85,7 +81,6 @@ func (er *EventRouter) updateEvent(objOld interface{}, objNew interface{}) {
 	oldEvent := objOld.(*v1.Event)
 	newEvent := objNew.(*v1.Event)
 	er.sink.UpdateEvents(newEvent, oldEvent)
-	log.V(5).Info("Event Deleted from the system:\n%v, %v", newEvent, oldEvent)
 }
 
 // deleteEvent should only occur when the system garbage collects events via TTL expiration

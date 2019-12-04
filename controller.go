@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
+	"github.com/event-scrapper/sinks"
 	log "k8s.io/klog"
 
-	"github.com/eventscrapper/sinks"
 	v1 "k8s.io/api/core/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	coreinformers "k8s.io/client-go/informers/core/v1"
@@ -28,7 +28,7 @@ type EventRouter struct {
 	listerSynched cache.InformerSynced
 
 	// event sink
-	sink sink.EventSinkInterface
+	sink sinks.EventSinkInterface
 
 	// queue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -42,7 +42,7 @@ type EventRouter struct {
 func newEventRouter(kubeClient kubernetes.Interface, eventsInformer coreinformers.EventInformer) *EventRouter {
 	er := &EventRouter{
 		client: kubeClient,
-		sink:   sink.ManufactureSink(),
+		sink:   sinks.ManufactureSink(),
 	}
 	// create the workqueue
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())

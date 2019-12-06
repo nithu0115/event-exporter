@@ -72,7 +72,7 @@ func (er *EventRouter) Run(stopCh <-chan struct{}) {
 // addEvent is called when an event is created, or during the initial list
 func (er *EventRouter) addEvent(obj interface{}) {
 	event := obj.(*v1.Event)
-	fmt.Println(event)
+	//fmt.Println(event)
 	er.sink.UpdateEvents(event, nil)
 }
 

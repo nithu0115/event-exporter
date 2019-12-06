@@ -21,16 +21,10 @@ func ManufactureSink() (e EventSinkInterface) {
 	log.Infof("Sink is [%v]", s)
 	switch s {
 	case "stdoutsink":
-		// By default we buffer up to 1500 events, and drop messages if more than
-		// 1500 have come in without getting consumed
-		viper.SetDefault("sinkBufferSize", 1500)
-		viper.SetDefault("httpSinkDiscardMessages", true)
+		viper.SetDefault("stdoutJSONNamespace", "")
+		stdoutNamespace := viper.GetString("stdoutJSONNamespace")
 
-		bufferSize := viper.GetInt("sinkBufferSize")
-		overflow := viper.GetBool("sinkDiscardMessages")
-
-		e := NewStdOutSink(overflow, bufferSize)
-		go e.Run(make(chan bool))
+		e = NewStdoutSink(stdoutNamespace)
 	/*case "s3sink":
 	region := viper.GetString("s3SinkRegion")
 	if region == "" {

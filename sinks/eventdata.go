@@ -6,9 +6,9 @@ import (
 	"io"
 
 	"github.com/crewjam/rfc5424"
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/json-iterator/go/extra"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/nytlabs/gojsonexplode"
 )

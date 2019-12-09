@@ -1,4 +1,4 @@
-module github.com/event-scrapper
+module github.com/event-exporter
 
 go 1.13
 
@@ -12,9 +12,12 @@ require (
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/json-iterator/go v1.1.8
 	github.com/nytlabs/gojsonexplode v0.0.0-20160201065013-0f3fe6bb573f
+	github.com/satori/go.uuid v1.2.0
+	github.com/sethgrid/pester v0.0.0-20190127155807-68a33a018ad0
 	github.com/spf13/viper v1.5.0
 	golang.org/x/oauth2 v0.0.0-20191122200657-5d9234df094c // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
+	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	k8s.io/api v0.0.0-20191121015604-11707872ac1c
 	k8s.io/apimachinery v0.0.0-20191123233150-4c4803ed55e3
 	k8s.io/client-go v0.0.0-20190620085101-78d2af792bab

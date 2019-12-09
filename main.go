@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	log "k8s.io/klog"
 
-	"github.com/event-scrapper/signals"
+	"github.com/event-exporter/signals"
 )
 
 var (

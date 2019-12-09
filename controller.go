@@ -1,9 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/event-scrapper/sinks"
+	"github.com/event-exporter/sinks"
 	log "k8s.io/klog"
 
 	v1 "k8s.io/api/core/v1"
@@ -28,20 +29,15 @@ type EventRouter struct {
 
 	// event sink
 	sink sinks.EventSinkInterface
-
-	// queue is a rate limited work queue. This is used to queue work to be
-	// processed instead of performing it as soon as a change happens. This
-	// means we can ensure we only process a fixed amount of resources at a
-	// time, and makes it easy to ensure we are never processing the same item
-	// simultaneously in two different workers.
-	//queue workqueue.RateLimitingInterface
 }
 
 // NewEventRouter will create a new event router using the input params
 func newEventRouter(kubeClient kubernetes.Interface, eventsInformer coreinformers.EventInformer) *EventRouter {
+	var ctx context.Context
+
 	er := &EventRouter{
 		client: kubeClient,
-		sink:   sinks.ManufactureSink(),
+		sink:   sinks.ManufactureSink(ctx),
 	}
 
 	eventsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

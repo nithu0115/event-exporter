@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/event-exporter/sinks"
+	sinks "github.com/event-exporter/sinks"
 	log "k8s.io/klog"
 
 	v1 "k8s.io/api/core/v1"

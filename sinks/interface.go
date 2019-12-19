@@ -3,10 +3,17 @@ package sinks
 import (
 	"context"
 	"errors"
+	"os"
 
 	"github.com/spf13/viper"
 	v1 "k8s.io/api/core/v1"
 	log "k8s.io/klog"
+)
+
+const (
+	sink             string = "SINK"
+	logGroupNameEnv  string = "CW_LOG_GROUP_NAME"
+	logStreamNameEnv string = "CW_LOG_STREAM_NAME"
 )
 
 // EventSinkInterface is the interface used to shunt events
@@ -15,46 +22,40 @@ type EventSinkInterface interface {
 }
 
 // ManufactureSink will manufacture a sink according to viper configs
-// TODO: Determine if it should return an array of sinks
 func ManufactureSink(ctx context.Context) (e EventSinkInterface) {
-	viper.SetDefault("sink", "cloudwatchsink")
-	s := viper.GetString("sink")
+	s, ok := os.LookupEnv(sink)
+	if !ok || s == "" {
+		log.Warningf("SINK is not set! Setting it to CloudWatchLogs")
+		viper.SetDefault("SINK", "CWL")
+		s = viper.GetString("SINK")
+	}
 	log.Infof("Sink is [%v]", s)
 	switch s {
 	case "stdoutsink":
 		e = NewStdoutSink(ctx)
 
-	case "cloudwatchsink":
-		viper.SetDefault("AWS_REGION", "us-east-1")
-		region := viper.GetString("AWS_REGION")
-		if region == "" {
-			log.Warningf("Region is not specified, picking default")
+	case "CWL":
+		logGroupName, ok := os.LookupEnv(logGroupNameEnv)
+		if !ok || logGroupName == "" {
+			log.Exitf("Missing CWL Log Group, please set CW_LOG_GROUP_NAME Env variable")
 		}
 
-		viper.SetDefault("logGroupName", "testing-k8s-events")
-		logGroup := viper.GetString("logGroupName")
-		if logGroup == "" {
-			log.Fatal("logGroupName is not specified")
+		logStreamName, ok := os.LookupEnv(logStreamNameEnv)
+		if !ok || logGroupName == "" {
+			log.Exitf("Missing CWL Log Stream, please set CW_LOG_STREAM_NAME Env variable")
 		}
-
-		viper.SetDefault("logStreamName", "testing")
-		logStream := viper.GetString("logStreamName")
-		if logStream == "" {
-			log.Fatal("logStream is not specified")
-		}
-
 		// By default we buffer up to 1500 events, and drop messages if more than
 		// 1500 have come in without getting consumed
 		viper.SetDefault("sinkBufferSize", 1500)
 		viper.SetDefault("sinkDiscardMessages", true)
 
-		viper.SetDefault("sinkUploadInterval", 2)
+		viper.SetDefault("sinkUploadInterval", 5)
 		uploadInterval := viper.GetInt("sinkUploadInterval")
 
 		bufferSize := viper.GetInt("sinkBufferSize")
 		overflow := viper.GetBool("sinkDiscardMessages")
 
-		cwl, err := NewS3Sink(logGroup, logStream, region, uploadInterval, overflow, bufferSize)
+		cwl, err := NewCWLSink(logGroupName, logStreamName, uploadInterval, overflow, bufferSize)
 		if err != nil {
 			log.Fatal(err.Error())
 		}

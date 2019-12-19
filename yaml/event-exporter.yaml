@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: event-exporter-sa
+  namespace: kube-system
+---
+apiVersion: v1
+data:
+  CW_LOG_GROUP_NAME: "kubernetes/Event_Exporter_Log_Group"
+  CW_LOG_STREAM_NAME: "eventData-12f6d78"
+  AWS_REGION: "REGION"
+kind: ConfigMap
+metadata:
+  name: event-exporter-cm
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: event-exporter-rb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+  - kind: ServiceAccount
+    name: event-exporter-sa
+    namespace: kube-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-exporter-deployment
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: event-exporter
+  template:
+    metadata:
+      labels:
+        app: event-exporter
+    spec:
+      serviceAccountName: event-exporter-sa
+      containers:
+        - name: event-exporter
+          image: nithmu/k8s-event-exporter:v0.1.0
+          command:
+            - '/event-exporter'
+          envFrom:
+          - configMapRef:
+              name: event-exporter-cm

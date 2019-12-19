@@ -3,7 +3,6 @@ package sinks
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -62,14 +61,11 @@ type logStream struct {
 	expiration        time.Time
 }
 
-// NewS3Sink is the factory method constructing a new S3Sink
-func NewS3Sink(logGroupName string, logStreamName string, region string, uploadInterval int, overflow bool, bufferSize int) (*CWLSink, error) {
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(region),
-	})
-	if err != nil {
-		return nil, err
-	}
+// NewCWLSink is the factory method constructing a new S3Sink
+func NewCWLSink(logGroupName string, logStreamName string, uploadInterval int, overflow bool, bufferSize int) (*CWLSink, error) {
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
 
 	client := cloudwatchlogs.New(sess)
 
@@ -142,7 +138,7 @@ func (cwl *CWLSink) drainEvents(events []EventData) {
 
 	timestamp := time.Now()
 	s := &logStream{
-		logStreamName: "testing",
+		logStreamName: cwl.logStreamName,
 	}
 
 	for _, evt := range events {
@@ -153,7 +149,7 @@ func (cwl *CWLSink) drainEvents(events []EventData) {
 			return
 		}
 		messageSize += len(eJSONBytes)
-		fmt.Println("size =====", messageSize)
+		//fmt.Println("size =====", messageSize)
 		s.logEvents = append(s.logEvents, &cloudwatchlogs.InputLogEvent{
 			Message:   aws.String(string(eJSONBytes)),
 			Timestamp: aws.Int64(timestamp.UnixNano() / 1e6), // CloudWatch uses milliseconds since epoch
@@ -192,12 +188,15 @@ func (cwl *CWLSink) upload(stream *logStream) error {
 	sort.Slice(stream.logEvents, func(i, j int) bool {
 		return aws.Int64Value(stream.logEvents[i].Timestamp) < aws.Int64Value(stream.logEvents[j].Timestamp)
 	})
+
+	log.Infof("Uploading LogEvents to CloudWatch Logs...")
 	response, err := cwl.client.PutLogEvents(&cloudwatchlogs.PutLogEventsInput{
 		LogEvents:     stream.logEvents,
 		LogGroupName:  aws.String(cwl.logGroupName),
 		LogStreamName: aws.String(stream.logStreamName),
 		SequenceToken: stream.nextSequenceToken,
 	})
+
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
 			if awsErr.Code() == cloudwatchlogs.ErrCodeDataAlreadyAcceptedException {
@@ -224,7 +223,7 @@ func (cwl *CWLSink) upload(stream *logStream) error {
 	cwl.processRejectedEventsInfo(response)
 	cwl.lastUploadTimestamp = now.UnixNano()
 	stream.logEvents = stream.logEvents[:0]
-
+	log.Infof("Uploaded to CloudWatch %v bytes", stream.currentByteLength)
 	return nil
 }
 
@@ -262,3 +261,73 @@ func cloudwatchLen(event string) int {
 func (stream *logStream) updateExpiration() {
 	stream.expiration = time.Now().Add(logStreamInactivityTimeout)
 }
+
+/* ToDo auto create log group and log stream
+// CreateLogGroup
+func createLogGroup() (logGroupName string, err error) {
+	logGroup := "kubernetes/Event_Exporter_Log_Group"
+
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+
+	//session
+	client := cloudwatchlogs.New(sess)
+
+	//Input
+	logGroupNameInput := &cloudwatchlogs.CreateLogGroupInput{
+		LogGroupName: aws.String(logGroup),
+	}
+	//create
+	_, err = client.CreateLogGroup(logGroupNameInput)
+
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			if awsErr.Code() != cloudwatchlogs.ErrCodeResourceAlreadyExistsException {
+				return "", err
+			}
+			log.V(2).Infof("cloudwatch Log group already exists\n")
+		} else {
+			return "", err
+		}
+	}
+	return logGroup, nil
+}
+
+func createLogStream(logGroupName string) (logStreamName string, err error) {
+
+	//generate UUID
+	id, err := uuid.NewRandom()
+	if err != nil {
+		log.Exit("Unable to generate Unique ID")
+	}
+
+	logstreamOutputName := "eventData" + id.String()
+
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+
+	//session
+	client := cloudwatchlogs.New(sess)
+
+	//Input
+	logStreamNameInput := &cloudwatchlogs.CreateLogStreamInput{
+		LogGroupName:  aws.String(logGroupName),
+		LogStreamName: aws.String(logstreamOutputName),
+	}
+	//create
+	_, err = client.CreateLogStream(logStreamNameInput)
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			if awsErr.Code() != cloudwatchlogs.ErrCodeResourceAlreadyExistsException {
+				return "", err
+			}
+			log.Infof("cloudwatch Log Stream %s already exists\n", logstreamOutputName)
+		} else {
+			return "", err
+		}
+	}
+	return logstreamOutputName, nil
+}
+*/
